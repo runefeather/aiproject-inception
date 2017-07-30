@@ -6,7 +6,7 @@ from PIL import Image
 import os
 import download
 from dataset import one_hot_encoded
-import helpers
+from helpers import downSampling
 ########################################################################
 # data path for images
 global data_path
@@ -110,7 +110,7 @@ def load_training_data():
     for i in range(0, _num_images_train):
         f = os.listdir(os.path.join(data_path, 'training'))[i]
         if f in a:
-            img = Image.open(os.path.join(data_path, 'training', f))
+            img = downSampling(os.path.join(data_path, 'training', f), 300, 300)
             arr = np.array(img)
             if(len(arr[0]) == 460): images[i] = arr
             cls[i] = TRAIN_DICTIONARY[f]

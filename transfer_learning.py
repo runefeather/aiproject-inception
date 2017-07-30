@@ -75,7 +75,7 @@ def optimize(num_iterations, session, x, y_true, global_step, optimizer, accurac
 
             # Print status.
             msg = "Global Step: {0:>6}, Training Batch Accuracy: {1:>6.1%}"
-            print(msg.format(i_global, batch_acc))
+            print(msg.format(	, batch_acc))
 
     # Ending time.
     end_time = time.time()
@@ -85,6 +85,7 @@ def optimize(num_iterations, session, x, y_true, global_step, optimizer, accurac
 
     # Print the time-usage.
     print("Time usage: " + str(timedelta(seconds=int(round(time_dif)))))
+    return session
 
 
 def plot_example_errors(cls_pred, correct):
@@ -305,7 +306,9 @@ def main(splitnum):
 
 	print_test_accuracy(session, x, y_true, y_pred_cls, 	transfer_values_test, labels_test, cls_test)
 
-	optimize(4900, session, x, y_true, global_step, optimizer, accuracy, transfer_values_train, labels_train)
+	session = optimize(4900, session, x, y_true, global_step, optimizer, accuracy, transfer_values_train, labels_train)
+
+	print_test_accuracy(session, x, y_true, y_pred_cls, 	transfer_values_test, labels_test, cls_test)
 
 	model.close()
 	session.close()
