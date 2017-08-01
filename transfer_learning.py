@@ -75,7 +75,7 @@ def optimize(num_iterations, session, x, y_true, global_step, optimizer, accurac
 
             # Print status.
             msg = "Global Step: {0:>6}, Training Batch Accuracy: {1:>6.1%}"
-            print(msg.format(	, batch_acc))
+            print(msg.format(i_global, batch_acc))
 
     # Ending time.
     end_time = time.time()
@@ -237,7 +237,7 @@ def main(splitnum):
 	print(tumordata.data_path)
 
 	class_names = tumordata.load_class_names()
-	images_train, cls_train, labels_train = tumordata.load_training_data	()
+	images_train, cls_train, labels_train = tumordata.load_training_data()
 	images_test, cls_test, labels_test = tumordata.load_testing_data()
 
 	print("Size of:")
@@ -304,11 +304,11 @@ def main(splitnum):
 	session.run(tf.global_variables_initializer())
 
 
-	print_test_accuracy(session, x, y_true, y_pred_cls, 	transfer_values_test, labels_test, cls_test)
+	print_test_accuracy(session, x, y_true, y_pred_cls, transfer_values_test, labels_test, cls_test)
 
-	session = optimize(4900, session, x, y_true, global_step, optimizer, accuracy, transfer_values_train, labels_train)
+	session = optimize(5000, session, x, y_true, global_step, optimizer, accuracy, transfer_values_train, labels_train)
 
-	print_test_accuracy(session, x, y_true, y_pred_cls, 	transfer_values_test, labels_test, cls_test)
+	print_test_accuracy(session, x, y_true, y_pred_cls, transfer_values_test, labels_test, cls_test)
 
 	model.close()
 	session.close()

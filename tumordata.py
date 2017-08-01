@@ -7,6 +7,7 @@ import os
 import download
 from dataset import one_hot_encoded
 from helpers import downSampling
+from helpers import sliding
 ########################################################################
 # data path for images
 global data_path
@@ -98,22 +99,33 @@ def load_testing_data():
         if f in a:
             img = Image.open(os.path.join(data_path, 'testing', f))
             arr = np.array(img)
-            if(len(arr[0]) == 460): images[i] = arr
+            images[i] = arr
             cls[i] = TEST_DICTIONARY[f]
     return images, cls, one_hot_encoded(class_numbers=cls, num_classes=num_classes)
 
 def load_training_data():
     # Pre-allocate the arrays for the images and class-numbers for efficiency.
-    images = np.zeros(shape=[_num_images_train, img_width, img_height, num_channels], dtype=float)
-    cls = np.zeros(shape=[_num_images_train], dtype=int)
+    # images = np.zeros(shape=[_num_images_train, img_width, img_height, num_channels], dtype=float)
+    # cls = np.zeros(shape=[_num_images_train], dtype=int)
+    images = []
+    cls = []
     a = TRAIN_DICTIONARY.keys()
     for i in range(0, _num_images_train):
         f = os.listdir(os.path.join(data_path, 'training'))[i]
         if f in a:
-            img = downSampling(os.path.join(data_path, 'training', f), 300, 300)
-            arr = np.array(img)
-            if(len(arr[0]) == 460): images[i] = arr
-            cls[i] = TRAIN_DICTIONARY[f]
+            img = downSampling(os.path.join(data_path, 'training', f), 350, 230)
+            arr = sliding(img)
+            # print(len(arr))
+            # arr = np.array(img)
+            # images[i] = arr
+            # cls[i] = TRAIN_DICTIONARY[f]
+            for x in arr:
+                images.append(x)
+                cls.append(TRAIN_DICTIONARY[f])
+
+    images = np.array(images)
+    cls = np.array(cls, dtype=int)
+    print(cls)
     return images, cls, one_hot_encoded(class_numbers=cls, num_classes=num_classes)
 
 def load_validation_data():
