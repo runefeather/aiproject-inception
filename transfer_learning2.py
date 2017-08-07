@@ -6,6 +6,7 @@ from datetime import timedelta
 import os
 import sys
 from PIL import Image
+
 # Functions and classes for loading and using the Inception model.
 import inception
 from inception import transfer_values_cache
@@ -36,8 +37,8 @@ def main(splitnum, finalimgpath):
 
     def random_batch():
         # Number of images (transfer-values) in the training-set.
-        # num_images = len(transfer_values_train)
-        num_images = len(labels_train)
+        num_images = len(transfer_values_train)
+
         # Create a random index.
         idx = np.random.choice(num_images,
                                size=train_batch_size,
@@ -55,114 +56,75 @@ def main(splitnum, finalimgpath):
     def optimize(num_iterations):
         # Start-time used for printing time-usage below.
         start_time = time.time()
-        
-        # path for checkpoint file. If this exists, then optimization has been done
-        chkpointpath = "D:\\AI stuff\\aiproject-inception-master\\checkpoint\\checkpoint"
-        if(os.path.exists(chkpointpath)):
-            print("In the path")
-            if(splitnum == "split1"):
-                print("In split1")
-                saver = tf.train.import_meta_graph("checkpoint\\split1-700.meta")
-                saver.restore(session, "checkpoint\\split1-700")
-                x_batch, y_true_batch = random_batch()
-                feed_dict_train = {x: x_batch, y_true: y_true_batch}
-                batch_acc = session.run(accuracy, feed_dict=feed_dict_train)
-                print("accuracy inside: ", batch_acc)
-                # session.run(tf.global_variables_initializer())
-                return
-               
-            elif(splitnum == "split2"): 
-                saver = tf.train.import_meta_graph("D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split2\\my-model-8600.meta")
-                saver.restore(session, "D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split2\\my-model-8600")
-                # session.run(tf.global_variables_initializer())
-                return
-                
-            elif(splitnum == "split3"):
-                saver = tf.train.import_meta_graph("D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split3\\my-model-500.meta")
-                saver.restore(session, "D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split3\\my-model-500")
-                # session.run(tf.global_variables_initializer())                
-                return
-                
-            elif(splitnum == "split4"):
-                saver = tf.train.import_meta_graph("D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split4\\my-model-8800.meta")
-                saver.restore(session, "D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split4\\my-model-8800")
-                # session.run(tf.global_variables_initializer())
-                return
 
-            elif(splitnum == "split5"):
-                saver = tf.train.import_meta_graph("D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split5\\my-model-3300.meta")
-                saver.restore(session, "D:\\AI stuff\\aiproject-inception-master\\checkpoints\\split5\\my-model-3300")
-                # session.run(tf.global_variables_initializer())
-                # why is the 
-                return
+        # Else, save for the first time
+        saver = tf.train.Saver(tf.all_variables(), max_to_keep=100)
+        session_list = []
+        test_acc = []
 
-        else:
-            print("training all over again")
-            # Else, save for the first time
-            saver = tf.train.Saver(tf.all_variables(), max_to_keep=100)
-            session_list = []
-            test_acc = {}
+        for i in range(num_iterations):
+            # Get a batch of training examples.
+            # x_batch now holds a batch of images (transfer-values) and
+            # y_true_batch are the true labels for those images.
+            x_batch, y_true_batch = random_batch()
 
-            for i in range(num_iterations):
-                # Get a batch of training examples.
-                # x_batch now holds a batch of images (transfer-values) and
-                # y_true_batch are the true labels for those images.
-                x_batch, y_true_batch = random_batch()
+            # Put the batch into a dict with the proper names
+            # for placeholder variables in the TensorFlow graph.
+            feed_dict_train = {x: x_batch,
+                               y_true: y_true_batch}
 
-                # Put the batch into a dict with the proper names
-                # for placeholder variables in the TensorFlow graph.
-                feed_dict_train = {x: x_batch,
-                                   y_true: y_true_batch}
+            # Run the optimizer using this batch of training data.
+            # TensorFlow assigns the variables in feed_dict_train
+            # to the placeholder variables and then runs the optimizer.
+            # We also want to retrieve the global_step counter.
+            i_global, _ = session.run([global_step, optimizer],
+                                      feed_dict=feed_dict_train)
 
-                # Run the optimizer using this batch of training data.
-                # TensorFlow assigns the variables in feed_dict_train
-                # to the placeholder variables and then runs the optimizer.
-                # We also want to retrieve the global_step counter.
-                i_global, _ = session.run([global_step, optimizer],
-                                          feed_dict=feed_dict_train)
+            # Print status to screen every 100 iterations (and last).
+            if (i_global % 100 == 0) or (i == num_iterations - 1):
+                savepath = saver.save(session, 'checkpoints\\split1\\model', global_step=i_global)
+                session_list.append(savepath)
 
-                # Print status to screen every 100 iterations (and last).
-                if (i_global % 100 == 0) or (i == num_iterations - 1):
-                    savepath = saver.save(session, 'D:\\AI stuff\\aiproject-inception-master\\checkpoints\\'+str(splitnum), global_step=i_global)
-                    session_list.append(savepath)
+                # Calculate the accuracy on the training-batch.
+                batch_acc = session.run(accuracy,
+                                        feed_dict=feed_dict_train)
 
-                    # Calculate the accuracy on the training-batch.
-                    batch_acc = session.run(accuracy,
-                                            feed_dict=feed_dict_train)
+                # Test accuracy with session 
+                correct, cls_pred = predict_cls_test()
+                acc, num_correct = classification_accuracy(correct)
 
-                    # Test accuracy with session 
-                    correct, cls_pred = predict_cls_test()
-                    acc, num_correct = classification_accuracy(correct)
+                # Print status.
+                # msg = "Global Step: {0:>6}, Training Batch Accuracy: {1:>6.1%}"
+                # print(msg.format(i_global, batch_acc))
+                # print("Testing Accuracy: ", round(acc*100, 2))
 
-                    # Print status.
-                    msg = "Global Step: {0:>6}, Training Batch Accuracy: {1:>6.1%}"
-                    print(msg.format(i_global, batch_acc))
-                    print("Testing Accuracy: ", round(acc*100, 2))
-
-                    # save test accuracy
-                    test_acc[i_global] = round(acc*100, 2)
-                    print("========================================================")
+                # save test accuracy
+                test_acc.append(round(acc*100, 2))
+                # print("========================================================")
 
 
-            # Ending time.
-            end_time = time.time()
+        # Ending time.
+        end_time = time.time()
 
-            # Difference between start and end-times.
-            time_dif = end_time - start_time
+        # Difference between start and end-times.
+        time_dif = end_time - start_time
 
-            # Print the time-usage.
-            print("Time usage: " + str(timedelta(seconds=int(round(time_dif)))))
+        # Print the time-usage.
+        print("Time usage: " + str(timedelta(seconds=int(round(time_dif)))))
 
-            max_acc = max(test_acc.values())
-            print("MAX: ", max_acc)
+        max_acc = max(test_acc)
 
-            pth = session_list[list(test_acc.values()).index(max_acc)]
+        print("MAX: ", max_acc)
+        # print(list(test_acc.values()).index(max_acc))
+        print(test_acc.index(max_acc))
+        # print(mydict.values().index(max(test_acc.values()))) #
+        pth = session_list[test_acc.index(max_acc)]
 
-            saver.restore(session, pth)
-            return
+        saver.restore(session, pth)
+        return
 
-    def plot_example_errors(cls_pred, correct): # This function is called from
-        print_test_accuracy() #below.
+    def plot_example_errors(cls_pred, correct):
+        # This function is called from print_test_accuracy() below.
 
         # cls_pred is an array of the predicted class-number for
         # all images in the test-set.
@@ -251,6 +213,20 @@ def main(splitnum, finalimgpath):
 
         return correct, cls_pred
 
+    def predict_one_image(imgarr):
+        # Number of images.
+        num_images = 1
+
+        label = np.zeros(shape=[0, 2], dtype=np.int)
+
+        # Allocate an array for the predicted classes which
+        # will be calculated in batches and filled into this array.
+        cls_pred = np.zeros(shape=num_images, dtype=np.int)
+
+        feed_dict = {x: imgarr, y_true: label}
+        cls_pred = session.run(y_pred_cls, feed_dict=feed_dict)
+
+        return cls_pred
 
     def predict_cls_test():
         return predict_cls(transfer_values = transfer_values_test,
@@ -315,9 +291,14 @@ def main(splitnum, finalimgpath):
     print("Size of:")
     print("- Training-set:\t\t{}".format(len(images_train)))
     print("- Test-set:\t\t{}".format(len(images_test)))
-    print("Labels train: ", len(labels_train))
+
+    # Image to predict on
+    img = Image.open(finalimgpath)
+    imgarr = []
+    imgarr.append(np.array(img))
+
     # inception dir
-    inception.data_dir = 'inception\\'
+    inception.data_dir = 'inception/'
 
     # download the model
     inception.maybe_download()
@@ -329,6 +310,8 @@ def main(splitnum, finalimgpath):
     file_path_cache_train = os.path.join(tumordata.data_path, 'inception_tumordata_train.pkl')
     file_path_cache_test = os.path.join(tumordata.data_path, 'inception_tumordata_test.pkl')
 
+    file_path_cache_single_test = os.path.join(tumordata.data_path, 'inception_tumordata_single_test.pkl')
+
     print("Processing Inception transfer-values for training-images ...")
 
     # If transfer-values have already been calculated then reload them,
@@ -336,7 +319,6 @@ def main(splitnum, finalimgpath):
     transfer_values_train = transfer_values_cache(cache_path=file_path_cache_train,
                                                   images=images_train,
                                                   model=model)
-    print("length of transfer value train: ",len(transfer_values_train))
 
     print("Processing Inception transfer-values for test-images ...")
 
@@ -346,13 +328,19 @@ def main(splitnum, finalimgpath):
                                                  images=images_test,
                                                  model=model)
 
+    transfer_values_single_test = transfer_values_cache(cache_path=file_path_cache_single_test, images=imgarr, model=model)
+
+    # print("TRANSFER VALUES TEST: ", transfer_values_test)
+
     transfer_len = model.transfer_len
 
     x = tf.placeholder(tf.float32, shape=[None, transfer_len], name='x')
-
     y_true = tf.placeholder(tf.float32, shape=[None, num_classes], name='y_true')
-
     y_true_cls = tf.argmax(y_true, dimension=1)
+
+    # x_one = tf.placeholder(tf.float32, shape=[len(imgarr), len(imgarr[0]), 3], name='x_one')
+    # y_true_one = tf.placeholder(tf.float32, shape=1, name='y_true_one')    
+    # y_true_cls_one = tf.argmax(y_true_one, dimension=1)
 
     # Wrap the transfer-values as a Pretty Tensor object.
     x_pretty = pt.wrap(x)
@@ -376,31 +364,23 @@ def main(splitnum, finalimgpath):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
 
-    print("************************")
-    #print(session.run(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)))
 
     print_test_accuracy(show_example_errors=False, show_confusion_matrix=False)
 
-   
+    optimize(1000)
 
-    optimize(10000)
-
-    print("************************")
-    #print(session.run(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)))
-    
-
+    print_test_accuracy(show_example_errors=False, show_confusion_matrix=False)
     correct, cls_pred = predict_cls_test()
     acc, num_correct = classification_accuracy(correct)
-    print("num correct: ",num_correct)
-    
-    # prediction = model.classify(image_path=finalimgpath)
-    # model.print_scores(pred=prediction, k=2)
+    # print("acc, num correct: ", acc, num_correct)
 
-    print("ACCURACY: ", acc)
-    print_test_accuracy(show_example_errors=False, show_confusion_matrix=False)
 
-    print("=======================================================================")
-    print("=======================================================================")
-    
-    
-    return acc
+    cls_pred = predict_one_image(transfer_values_single_test)
+    # print("PREDICTION")
+    # print(cls_pred)
+    print(">>>>>>>>>>>><<<<<<<<<<<<<<<<")
+
+
+    # prediction = model.classify(finalimgpath)
+
+    return acc, cls_pred
